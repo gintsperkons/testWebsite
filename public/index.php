@@ -2,19 +2,13 @@
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-// Debugging output
-error_log("Accessed index.php");
-
 // Setup FastRoute dispatcher
 $dispatcher = FastRoute\simpleDispatcher(function(FastRoute\RouteCollector $r) {
     $r->addRoute('POST', '/graphql', [App\Controller\GraphQL::class, 'handle']);
     $r->addRoute('GET', '/', function() {
-        echo 'Welcome to the Home Page!';
+        echo file_get_contents(__DIR__ . '/../public/index.html');
     });
 });
-
-// Debugging output
-error_log("Dispatcher created");
 
 // Dispatch the request
 $routeInfo = $dispatcher->dispatch(
@@ -22,8 +16,19 @@ $routeInfo = $dispatcher->dispatch(
     $_SERVER['REQUEST_URI']
 );
 
-// Debugging output
-error_log("Dispatching request");
+// Serve static files directly
+if (preg_match('/\.(jpg|jpeg|png|gif|css|js)$/', $_SERVER['REQUEST_URI'])) {
+    $filePath = __DIR__ . '/../public' . $_SERVER['REQUEST_URI'];
+    if (file_exists($filePath) && is_file($filePath)) {
+        header('Content-Type: ' . mime_content_type(basename($filePath)));
+        readfile($filePath);
+        exit;
+    } else {
+        http_response_code(404);
+        echo '404 Not Found';
+        exit;
+    }
+}
 
 // Handle the route
 switch ($routeInfo[0]) {
@@ -41,5 +46,3 @@ switch ($routeInfo[0]) {
         call_user_func_array($handler, $vars);
         break;
 }
-
-
