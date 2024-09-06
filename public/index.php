@@ -1,5 +1,6 @@
 <?php
-
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 require_once __DIR__ . '/../vendor/autoload.php';
 
 // Setup FastRoute dispatcher
@@ -9,6 +10,9 @@ $dispatcher = FastRoute\simpleDispatcher(function(FastRoute\RouteCollector $r) {
         echo file_get_contents(__DIR__ . '/../public/index.html');
     });
 });
+
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../');
+$dotenv->load();
 
 // Dispatch the request
 $routeInfo = $dispatcher->dispatch(
