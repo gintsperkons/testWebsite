@@ -6,8 +6,8 @@ use PDO;
 use PDOException;
 use Exception;
 
-class Attribute extends BaseModel {
-    protected static $table = 'attribute';
+class Gallery extends BaseModel {
+    protected static $table = 'gallery';
 
     public static function create($data) {
         if (empty(static::$table)) {
@@ -15,14 +15,16 @@ class Attribute extends BaseModel {
         }
         try {
             $pdo = static::getConnection();
-            $sql = 'SELECT * FROM ' . static::$table . ' WHERE attributeSetId = :attributeSetId and attId = :attId and value = :value and displayValue = :displayValue';
+            $sql = 'SELECT * FROM ' . static::$table . ' WHERE productId = :productId and imagePath = :imagePath';
             $stmt = $pdo->prepare($sql);
-            $stmt->execute(['attributeSetId' => $data['attributeSetId'], 'attId' => $data['attId'], 'value' => $data['value'], 'displayValue' => $data['displayValue']]);
+            $stmt->execute(['productId' => $data['productId'], 'imagePath' => $data['imagePath']]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($result) {
                 return $result;
             } else {
-                parent::create($data);
+                $sql = "INSERT INTO " . static::$table . " (productId, imagePath) VALUES (:productId, :imagePath)";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute(['productId' => $data['productId'], 'imagePath' => $data['imagePath']]);
                 return $pdo->lastInsertId();
             }
         } catch (PDOException $e) {
@@ -31,5 +33,7 @@ class Attribute extends BaseModel {
             error_log('General error: ' . $e->getMessage());
         }
     }
+
+
 
 }

@@ -20,11 +20,20 @@ $routeInfo = $dispatcher->dispatch(
     $_SERVER['REQUEST_URI']
 );
 
+
+
 // Serve static files directly
-if (preg_match('/\.(jpg|jpeg|png|gif|css|js)$/', $_SERVER['REQUEST_URI'])) {
+if (preg_match('/\.(jpg|jpeg|png|gif|css|js|jsx)$/', $_SERVER['REQUEST_URI'])) {
     $filePath = __DIR__ . '/../public' . $_SERVER['REQUEST_URI'];
     if (file_exists($filePath) && is_file($filePath)) {
-        header('Content-Type: ' . mime_content_type(basename($filePath)));
+        if (str_ends_with($filePath, '.css')) {
+            $mimeType = 'text/css';
+        } else if (str_ends_with($filePath, '.js')) {
+            $mimeType = 'application/javascript';
+        } else {
+            $mimeType = mime_content_type($filePath);
+        }
+        header('Content-Type: ' . $mimeType);
         readfile($filePath);
         exit;
     } else {

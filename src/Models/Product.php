@@ -2,142 +2,113 @@
 
 namespace App\Models;
 
-use App\Database\DBConnection;
 use PDO;
 use PDOException;
 use Exception;
+use App\Models\Brand;
+use App\Models\Category;
+use App\Models\Gallery;
 
-class Product {
-    protected $table = 'products';
+class Product extends SearchableModel {
+    protected static $table = 'products';
 
-    // Fetch a product by ID
-    public static function getProductById($id) {
-        $pdo = DBConnection::getConnection();
-        $stmt = $pdo->prepare("SELECT * FROM products WHERE id = :id");
-        $stmt->execute(['id' => $id]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
-    }
+    public static function create($data) {
+        //insert brand if not exists
+        //insert category
+        //insert gallery 
+        //insert price ==> currency
+        //insert attributesSet ==> attribute
 
-    // Fetch all products
-    public static function getAllProducts() {
-        $pdo = DBConnection::getConnection();
-        $stmt = $pdo->query("SELECT * FROM products");
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    // Create a new product
-    public static function createProduct($id, $name, $description, $inStock, $category, $brand, $prices, $gallery, $attributes) {
+        
         try {
-            
+            $pdo = static::getConnection();
+            $pdo->beginTransaction();
 
-            $pdo = DBConnection::getConnection();
-            $pdo->beginTransaction(); // Start transaction
-    
-            // Verify category
-            $categoryData = Category::getCategoryByName($category);
-            if (!$categoryData) {
-                // Create category using provided data
-                Category::createCategory($category); // Use the category name
-                // Retrieve the newly created category ID
-                $categoryData = Category::getCategoryByName($category);
-                error_log(print_r($categoryData, true));
+            $brand = Brand::firstOrCreate("name",['name' => $data['brand']]);
+            $category = Category::firstOrCreate("name",[ 'name' => $data['category']]);
+            $sql = "SELECT * FROM products WHERE productId = :productId";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute(['productId' => $data['id']]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($result) {
+                $prodId = $result['id'];
+            } else {
+                $prodId = parent::create(['name' => $data['name'], 'brandId' => $brand, 'categoryId' => $category, 'description' => $data['description'], 'productId' => $data['id'],'inStock'=> $data['inStock']]);
             }
-            $categoryID = $categoryData['id']; // Extract the ID
 
-            $all = Category::getAllCategories();
-            if (!$categoryData) {
-                throw new Exception("Failed to retrieve category after creation.");
+            foreach ($data['gallery'] as $image) {
+                Gallery::create(['productId' => $prodId, 'imagePath' => $image]);
             }
-            
-            // Insert product details
-            $stmt = $pdo->prepare("
-            INSERT INTO products (id, name, description, inStock, category_id, brand) 
-            VALUES (:id, :name, :description, :inStock, :category, :brand)
-            ");
-            $stmt->execute([
-                'id' => $id,
-                'name' => $name,
-                'description' => $description,
-                'inStock' => $inStock,
-                'category' => $categoryID,
-                'brand' => $brand,
-            ]);
-            
-            
-            // Insert prices
-            $stmt = $pdo->prepare("
-            INSERT INTO product_prices (product_id, amount, currency_label, currency_symbol) 
-            VALUES (:product_id, :amount, :currency_label, :currency_symbol)
-            ");
-            
-            foreach ($prices as $price) {
-                $stmt->execute([
-                    'product_id' => $id,
-                    'amount' => $price['amount'],
-                    'currency_label' => $price['currency']['label'],
-                    'currency_symbol' => $price['currency']['symbol'],
-                ]);
-            }
-            
-            error_log('attr: ' . print_r($attributes, true));
-            // Insert attributes
-            foreach ($attributes as $attributeSet) {
-                // Ensure attribute exists
-                $attributeData = Attribute::getAttributeById($attributeSet['id']);
-                error_log('attrDataid: ' . print_r($attributeSet['id'], true));
+            error_log('Creatin13g product');
 
-                if (!$attributeData) {
-                    // Create the attribute if it doesn't exist
-                    Attribute::createAttribute($attributeSet['id'], $attributeSet['name'], $attributeSet['type']);
-                }
-
-                // Insert each attribute item
-                $stmt = $pdo->prepare("
-                    INSERT INTO product_attributes (product_id, attribute_id, displayvalue) 
-                    VALUES (:product_id, :attribute_id, :displayvalue)
-                ");
-                foreach ($attributeSet['items'] as $item) {
-                    $stmt->execute([
-                        'product_id' => $id,
-                        'attribute_id' => $attributeSet['id'],
-                        'displayvalue' => $item['displayValue'],
-                    ]);
-                }
+            error_log(print_r($data['prices'],true));
+            foreach ($data['prices'] as $price) {
+                error_log(print_r($price,true));
+                Price::create(['productId' => $prodId, 'amount' => $price['amount'], 'currency' => $price['currency']]);
             }
-    
-            $pdo->commit(); // Commit transaction
+            error_log('Creatin357g product');
+
+            foreach ($data['attributes'] as $attribute) {
+                $attribute['productId'] = $prodId;
+                AttributeSet::create($attribute);
+            }
+
+
+
+            $pdo->commit();
+           // return $pdo->lastInsertId();
         } catch (PDOException $e) {
-            $pdo->rollBack(); // Rollback transaction on error
             error_log('Database error: ' . $e->getMessage());
-            throw $e; // Rethrow exception to be caught by outer catch block
         } catch (Exception $e) {
-            $pdo->rollBack(); // Rollback transaction on error
             error_log('General error: ' . $e->getMessage());
-            throw $e; // Rethrow exception to be caught by outer catch block
         }
+
+
+        //$lastInsertId = parent::create($data);
+        //return $lastInsertId;
     }
 
+    public static function getAll() {
+        $products = parent::getAll();
+        foreach ($products as $key => $product) {
+            $products[$key]['brand'] = Brand::getById($product['brandId'])['name'];
+            $products[$key]['category'] = Category::getById($product['categoryId'])['name'];
 
-    // Fetch all attributes related to a product
-    public static function getProductAttributes($productId) {
-        $pdo = DBConnection::getConnection();
-        $stmt = $pdo->prepare("
-            SELECT attributes.* FROM attributes
-            JOIN product_attributes ON attributes.id = product_attributes.attribute_id
-            WHERE product_attributes.product_id = :productId
-        ");
-        $stmt->execute(['productId' => $productId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
+            $products[$key]['gallery'] = array();
+            $gallery = Gallery::getByForeignKey('productId',$product['id']);
+            foreach ($gallery as $image) { // Use $imageKey instead of $key
+                array_push($products[$key]['gallery'], $image['imagePath']);
+            }
 
-    // Fetch all prices related to a product
-    public static function getProductPrices($productId) {
-        $pdo = DBConnection::getConnection();
-        $stmt = $pdo->prepare("
-            SELECT * FROM product_prices
-            WHERE product_id = :productId
-        ");
-        $stmt->execute(['productId' => $productId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $products[$key]['prices'] = array();
+            $prices = Price::getByForeignKey('productId',$product['id']);
+            foreach ($prices as $price) {
+                $currency = Currency::getById($price['currencyId']);
+                unset($currency['id']);
+                array_push($products[$key]['prices'], ['amount' => $price['amount'], 'currency' => $currency]);
+            }
+
+            $products[$key]['attributes'] = array();
+            $attributeSets = AttributeSet::getByForeignKey('productId',$product['id']);
+            foreach ($attributeSets as $attributeSet) {
+                $attributes = Attribute::getByForeignKey('attributeSetId',$attributeSet['id']);
+                    $items = Attribute::getByForeignKey('attributeSetId',$attributeSet['id']);
+                    foreach ($items as $item) {
+                        $item['id'] = $item['attId'];
+                        unset($item['attId']);
+                        unset($item['attributeSetId']);
+                    }
+                    error_log(print_r( $attributeSet,true));
+                    $attributeSet['id'] = $attributeSet['setId'];
+                    unset($attributeSet['setId']);
+                    unset($attributeSet['productId']);
+                    $attributeSet['items'] = $items;
+                    array_push($products[$key]['attributes'], $attributeSet);
+                    
+                
+            }
+
+        }
+        return $products;
     }
 }

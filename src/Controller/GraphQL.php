@@ -2,259 +2,399 @@
 
 namespace App\Controller;
 
+use Exception;
 use GraphQL\GraphQL as GraphQLBase;
-use GraphQL\Type\Definition\InputObjectType;
 use GraphQL\Type\Definition\ObjectType;
 use GraphQL\Type\Definition\Type;
+use GraphQL\Type\Definition\InputObjectType;
 use GraphQL\Type\Schema;
+use GraphQL\Error\Error;
 use GraphQL\Type\SchemaConfig;
 use RuntimeException;
 use Throwable;
-use App\Models\Product;
+
 use App\Models\Category;
-use App\Models\Order;
+use App\Models\Product;
 
 class GraphQL
 {
     static public function handle()
     {
-        header('Content-Type: application/json; charset=UTF-8');
-
-        if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-            http_response_code(204);
-            exit();
-        }
-
-        // Define Product Type
-        $productType = new ObjectType([
-            'name' => 'Product',
-            'fields' => [
-                'id' => Type::string(),
-                'name' => Type::string(),
-                'description' => Type::string(),
-                'inStock' => Type::boolean(),
-                'category' => Type::string(),
-                'brand' => Type::string(),
-                'prices' => [
-                    'type' => Type::listOf(new ObjectType([
-                        'name' => 'Price',
-                        'fields' => [
-                            'amount' => Type::float(),
-                            'currency' => new ObjectType([
-                                'name' => 'Currency',
-                                'fields' => [
-                                    'label' => Type::string(),
-                                    'symbol' => Type::string(),
-                                ],
-                            ]),
-                        ],
-                    ])),
-                ],
-                'gallery' => Type::listOf(Type::string()),
-                'attributes' => [
-                    'type' => Type::listOf(new ObjectType([
-                        'name' => 'AttributeSet',
-                        'fields' => [
-                            'id' => Type::string(),
-                            'name' => Type::string(),
-                            'type' => Type::string(),
-                            'items' => [
-                                'type' => Type::listOf(new ObjectType([
-                                    'name' => 'Attribute',
-                                    'fields' => [
-                                        'id' => Type::string(),
-                                        'displayValue' => Type::string(),
-                                        'value' => Type::string(),
-                                    ],
-                                ])),
-                            ],
-                        ],
-                    ])),
-                ],
-            ],
-        ]);
-
-        // Define Category Type
-        $categoryType = new ObjectType([
-            'name' => 'Category',
-            'fields' => [
-                'name' => Type::string(),
-            ],
-        ]);
-
-        // Define Order Type
-        $orderType = new ObjectType([
-            'name' => 'Order',
-            'fields' => [
-                'id' => Type::int(),
-                'product_id' => Type::string(),
-                'quantity' => Type::int(),
-                'total_price' => Type::float(),
-            ],
-        ]);
-
-        // Define Product Input Type
-        $productInputType = new InputObjectType([
-            'name' => 'ProductInput',
-            'fields' => [
-                'id' => ['type' => Type::nonNull(Type::string())],
-                'name' => ['type' => Type::nonNull(Type::string())],
-                'description' => ['type' => Type::string()],
-                'inStock' => ['type' => Type::nonNull(Type::boolean())],
-                'category' => ['type' => Type::nonNull(Type::string())],
-                'brand' => ['type' => Type::string()],
-                'prices' => [
-                    'type' => Type::listOf(new InputObjectType([
-                        'name' => 'PriceInput',
-                        'fields' => [
-                            'amount' => ['type' => Type::nonNull(Type::float())],
-                            'currency' => new InputObjectType([
-                                'name' => 'CurrencyInput',
-                                'fields' => [
-                                    'label' => ['type' => Type::nonNull(Type::string())],
-                                    'symbol' => ['type' => Type::nonNull(Type::string())],
-                                ],
-                            ]),
-                        ],
-                    ])),
-                ],
-                'gallery' => ['type' => Type::listOf(Type::string())],
-                'attributes' => [
-                    'type' => Type::listOf(new InputObjectType([
-                        'name' => 'AttributeSetInput',
-                        'fields' => [
-                            'id' => ['type' => Type::nonNull(Type::string())],
-                            'name' => ['type' => Type::nonNull(Type::string())],
-                            'type' => ['type' => Type::nonNull(Type::string())],
-                            'items' => [
-                                'type' => Type::listOf(new InputObjectType([
-                                    'name' => 'AttributeInput',
-                                    'fields' => [
-                                        'id' => ['type' => Type::nonNull(Type::string())],
-                                        'displayValue' => ['type' => Type::nonNull(Type::string())],
-                                        'value' => ['type' => Type::nonNull(Type::string())],
-                                    ],
-                                ])),
-                            ],
-                        ],
-                    ])),
-                ],
-            ],
-        ]);
-
-        // Define Query Type
-        $queryType = new ObjectType([
-            'name' => 'Query',
-            'fields' => [
-                'categories' => [
-                    'type' => Type::listOf($categoryType),
-                    'resolve' => static function () {
-                        return Category::getAllCategories();
-                    },
-                ],
-                'products' => [
-                    'type' => Type::listOf($productType),
-                    'resolve' => static function () {
-                        return Product::getAllProducts();
-                    },
-                ],
-                'product' => [
-                    'type' => $productType,
-                    'args' => [
-                        'id' => ['type' => Type::nonNull(Type::string())],
-                    ],
-                    'resolve' => static function ($root, $args) {
-                        return Product::getProductById($args['id']);
-                    },
-                ],
-                'orders' => [
-                    'type' => Type::listOf($orderType),
-                    'resolve' => static function () {
-                        return Order::getAllOrders();
-                    },
-                ],
-                'order' => [
-                    'type' => $orderType,
-                    'args' => [
-                        'id' => ['type' => Type::nonNull(Type::int())],
-                    ],
-                    'resolve' => static function ($root, $args) {
-                        return Order::getOrderById($args['id']);
-                    },
-                ],
-            ],
-        ]);
-
-        // Define Mutation Type
-        $mutationType = new ObjectType([
-            'name' => 'Mutation',
-            'fields' => [
-                'createOrder' => [
-                    'type' => $orderType,
-                    'args' => [
-                        'product_id' => ['type' => Type::nonNull(Type::string())],
-                        'quantity' => ['type' => Type::nonNull(Type::int())],
-                        'total_price' => ['type' => Type::nonNull(Type::float())],
-                    ],
-                    'resolve' => static function ($root, $args) {
-                        return Order::createOrder($args['product_id'], $args['quantity'], $args['total_price']);
-                    },
-                ],
-                'createProduct' => [
-                    'type' => $productType,
-                    'args' => [
-                        'productInput' => ['type' => $productInputType],
-                    ],
-                    'resolve' => static function ($root, $args) {
-                        try {
-                            $productInput = $args['productInput'];
-                            return Product::createProduct(
-                                $productInput['id'],
-                                $productInput['name'],
-                                $productInput['description'],
-                                $productInput['inStock'],
-                                $productInput['category'],
-                                $productInput['brand'],
-                                $productInput['prices'],
-                                $productInput['gallery'],
-                                $productInput['attributes']
-                            );
-                        } catch (Exception $e) {
-                            error_log('GraphQL Error: ' . $e->getMessage());
-                            throw new RuntimeException('Internal server error'); // or more specific error message
-                        }
-                    },
-                ],
-            ],
-        ]);
-
-        // Define Schema
-        $schema = new Schema(
-            (new SchemaConfig())
-                ->setQuery($queryType)
-                ->setMutation($mutationType)
-        );
-
-        // Process Request
+        //TODO make type for query return only needed based on data give because product deletion should handle the rest of item updating
+        error_log("Separator -------------------");
         try {
+            $testType = new ObjectType([
+                'name' => 'Hello',
+                'fields' => [
+                    'hello' => [
+                        'type' => Type::string(),
+                        'resolve' => static fn($rootValue, array $args): string => 'world',
+                    ],
+                ],
+            ]);
+
+            $categoryType = new ObjectType([
+                'name' => 'Category',
+                'fields' => [
+                    'id' => [
+                        'type' => Type::int(),
+                    ],
+                    'name' => [
+                        'type' => Type::string(),
+                    ],
+                ],
+            ]);
+            
+
+            $currencyType = new ObjectType([
+                'name' => 'Currency',
+                'fields' => [
+                    'label' => [
+                        'type' => Type::string(),
+                    ],
+                    'symbol' => [
+                        'type' => Type::string(),
+                    ],
+                ],
+            ]);
+
+            $priceType = new ObjectType([
+                'name' => 'Price',
+                'fields' => [
+                    'amount' => [
+                        'type' => Type::float(),
+                    ],
+                    'currency' => [
+                        'type' => $currencyType,
+                    ],
+                ],
+            ]);
+
+            $attributeType = new ObjectType([
+                'name' => 'Attribute',
+                'fields' => [
+                    'id' => [
+                        'type' => Type::string(),
+                    ],
+                    'displayValue' => [
+                        'type' => Type::string(),
+                    ],
+                    'value' => [
+                        'type' => Type::string(),
+                    ],
+                ],
+            ]);
+
+            $attributeSetType = new ObjectType([
+                'name' => 'AttributeSet',
+                'fields' => [
+                    'id' => [
+                        'type' => Type::string(),
+                    ],
+                    'name' => [
+                        'type' => Type::string(),
+                    ],
+                    'type' => [
+                        'type' => Type::string(),
+                    ],
+                    'items' => [
+                        'type' => Type::listOf($attributeType),
+                    ],
+                ],
+            ]);
+
+            $productType = new ObjectType([
+                'name' => 'Product',
+                'fields' => [
+                    'id' => [
+                        'type' => Type::int(),
+                    ],
+                    'name' => [
+                        'type' => Type::string(),
+                    ],
+                    'inStock' => [
+                        'type' => Type::boolean(),
+                    ],
+                    'description' => [
+                        'type' => Type::string(),
+                    ],
+                    'category' => [
+                        'type' => Type::string(),
+                    ],
+                    'brand' => [
+                        'type' => Type::string(),
+                    ],
+                    'gallery' => [
+                        'type' => Type::listOf(Type::string()),
+                    ],
+                    'prices' => [
+                        'type' => Type::listOf($priceType),
+                    ],
+                    'attributes' => [
+                        'type' => Type::listOf($attributeSetType),
+                    ],
+                ]
+            ]);
+
+            // Define CurrencyInput
+            $currencyInputType = new InputObjectType([
+                'name' => 'CurrencyInput',
+                'fields' => [
+                    'label' => [
+                        'type' => Type::string(),
+                    ],
+                    'symbol' => [
+                        'type' => Type::string(),
+                    ],
+                ],
+            ]);
+
+            // Define PriceInput
+            $priceInputType = new InputObjectType([
+                'name' => 'PriceInput',
+                'fields' => [
+                    'amount' => [
+                        'type' => Type::float(),
+                    ],
+                    'currency' => [
+                        'type' => $currencyInputType,
+                    ],
+                ],
+            ]);
+
+            // Define AttributeInput
+            $attributeInputType = new InputObjectType([
+                'name' => 'AttributeInput',
+                'fields' => [
+                    'id' => [
+                        'type' => Type::string(),
+                    ],
+                    'displayValue' => [
+                        'type' => Type::string(),
+                    ],
+                    'value' => [
+                        'type' => Type::string(),
+                    ],
+                ],
+            ]);
+
+            // Define AttributeSetInput
+            $attributeSetInputType = new InputObjectType([
+                'name' => 'AttributeSetInput',
+                'fields' => [
+                    'id' => [
+                        'type' => Type::string(),
+                    ],
+                    'name' => [
+                        'type' => Type::string(),
+                    ],
+                    'type' => [
+                        'type' => Type::string(),
+                    ],
+                    'items' => [
+                        'type' => Type::listOf($attributeInputType),
+                    ],
+                ],
+            ]);
+
+            // Define ProductInput
+            $productInputType = new InputObjectType([
+                'name' => 'ProductInput',
+                'fields' => [
+                    'id' => [
+                        'type' => Type::string(),
+                    ],
+                    'name' => [
+                        'type' => Type::string(),
+                    ],
+                    'inStock' => [
+                        'type' => Type::boolean(),
+                    ],
+                    'description' => [
+                        'type' => Type::string(),
+                    ],
+                    'brand' => [
+                        'type' => Type::string(),
+                    ],
+                    'category' => [
+                        'type' => Type::string(),
+                    ],
+                    'gallery' => [
+                        'type' => Type::listOf(Type::string()),
+                    ],
+                    'prices' => [
+                        'type' => Type::listOf($priceInputType),
+                    ],
+                    'attributes' => [
+                        'type' => Type::listOf($attributeSetInputType),
+                    ],
+                ],
+            ]);
+
+
+            $queryType = new ObjectType([
+                'name' => 'Query',
+                'fields' => [
+                    'echo' => [
+                        'type' => Type::string(),
+                        'args' => [
+                            'message' => ['type' => Type::string()],
+                        ],
+                        'resolve' => static fn($rootValue, array $args): string => $rootValue['prefix'] . $args['message'],
+                    ],
+                    'hello' => [
+                        'type' => $testType,
+                        'resolve' => static fn($rootValue, array $args) => $rootValue,
+                    ],
+                    'products' => [
+                        'type' => Type::listOf($productType),
+                        'resolve' => function () {
+                            return Product::getAll();
+                        },
+                    ],
+                    'categories' => [
+                        'type' => Type::listOf($categoryType),
+                        'resolve' => function () {
+                            return Category::getAll();
+                        },
+                    ],
+                    'category' => [
+                        'type' => $categoryType,
+                        'args' => [
+                            'id' => ['type' => Type::int()],
+                            'name' => ['type' => Type::string()],
+                        ],
+                        'resolve' => function ($rootValue, array $args) {
+                            if (isset($args['id']) && isset($args['name'])) {
+                                throw new Error('You must provide either an id or name');
+                            } elseif (!empty($args['id'])) {
+                                $answer = Category::getById($args['id']);
+                                return $answer ? $answer : throw new Error('Category not found');
+                            } elseif (!empty($args['name'])) {
+                                $answer = Category::getByName($args['name']);
+                                return $answer ? $answer : throw new Error('Category not found');
+
+                            } else {
+                                throw new Error('You must provide either an id or name');
+                            }
+
+                        },
+                    ],
+                ],
+            ]);
+
+
+
+            $mutationType = new ObjectType([
+                'name' => 'Mutation',
+                'fields' => [
+                    'sum' => [
+                        'type' => Type::int(),
+                        'args' => [
+                            'x' => ['type' => Type::int()],
+                            'y' => ['type' => Type::int()],
+                        ],
+                        'resolve' => static fn($calc, array $args): int => $args['x'] + $args['y'],
+                    ],
+                    'createCategory' => [
+                        'type' => Type::id(),
+                        'args' => [
+                            'name' => ['type' => Type::string()],
+                        ],
+                        'resolve' => function ($rootValue, array $args) {
+                            try {
+                                return Category::create(
+                                    [
+                                        'name' => $args['name'],
+                                    ]
+                                );
+                            } catch (Throwable $e) {
+                                return $e->getMessage();
+                            }
+                        },
+                    ],
+                    'deleteCategory' => [
+                        'type' => Type::int(),
+                        'args' => [
+                            'id' => ['type' => Type::int()],
+                            'name' => ['type' => Type::string()],
+                        ],
+                        'resolve' => function ($rootValue, array $args) {
+                            if (isset($args['id']) && isset($args['name'])) {
+                                throw new Error('You must provide either an id or name');
+                            } elseif (!empty($args['id'])) {
+                                $answer = Category::delete($args['id']);
+                                return $answer ? $answer : throw new Error('Category not found');
+                            } elseif (!empty($args['name'])) {
+                                $answer = Category::deleteByName($args['name']);
+                                return $answer ? $answer : throw new Error('Category not found');
+                            } else {
+                                throw new Error('You must provide either an id or name');
+                            }
+                        },
+                    ],
+                    'updateCategory' => [
+                        'type' => Type::int(),
+                        'args' => [
+                            'id' => ['type' => Type::int()],
+                            'name' => ['type' => Type::string()],
+                        ],
+                        'resolve' => function ($rootValue, array $args) {
+                            if (isset($args['id'])) {
+                                error_log($args['id']);
+                                $answer = Category::update($args['id'], ['name' => $args['name']]);
+                                return $answer ? $answer : throw new Error('Category not found');
+                            } else {
+                                throw new Error('You must provide an id to update');
+                            }
+                        },
+                    ],
+                    'createProduct' => [
+                        'type' => Type::id(),
+                        'args' => [
+                            'input' => ['type' => $productInputType],
+                        ],
+                        'resolve' => function ($rootValue, array $args) {
+                            try {
+                                error_log("-----------------");
+                                error_log(print_r($args['input'], true));
+                                return Product::create($args['input']);
+                            } catch (Throwable $e) {
+                                return $e->getMessage();
+                            }
+                        },
+                    ],
+                ],
+            ]);
+
+            // See docs on schema options:
+            // https://webonyx.github.io/graphql-php/schema-definition/#configuration-options
+            $schema = new Schema(
+                (new SchemaConfig())
+                    ->setQuery($queryType)
+                    ->setMutation($mutationType)
+            );
+
             $rawInput = file_get_contents('php://input');
             if ($rawInput === false) {
                 throw new RuntimeException('Failed to get php://input');
             }
 
-            $input = json_decode($rawInput, true);
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                throw new RuntimeException('Failed to decode JSON: ' . json_last_error_msg());
-            }
 
-            $query = $input['query'] ?? null;
+            $input = json_decode($rawInput, true);
+            $query = $input['query'];
             $variableValues = $input['variables'] ?? null;
 
-            $rootValue = [];
+
+
+
+            $rootValue = ['prefix' => 'You said: '];
             $result = GraphQLBase::executeQuery($schema, $query, $rootValue, null, $variableValues);
             $output = $result->toArray();
+
+
         } catch (Throwable $e) {
-            error_log('GraphQL error: ' . $e->getMessage());
+            error_log($e->getMessage());
             $output = [
                 'error' => [
                     'message' => $e->getMessage(),
@@ -262,6 +402,7 @@ class GraphQL
             ];
         }
 
+        header('Content-Type: application/json; charset=UTF-8');
         echo json_encode($output);
     }
 }
