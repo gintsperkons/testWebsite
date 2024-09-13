@@ -46,10 +46,10 @@ class ProductDetails extends React.Component {
                         attributes={attribute.items} 
                         type={attribute.type} />
                     ))}
-                    <h2>Price:</h2>
-                    <p>{product.prices[0].amount} {product.prices[0].currency.symbol}</p>
+                    <h2 className={"attributeTitle"}>Price:</h2>
+                    <p className={"detailsPrice"}>{product.prices[0].currency.symbol}{product.prices[0].amount}</p>
                     <button className = {"cartButton"}>Add to cart</button>
-                    <div dangerouslySetInnerHTML={{ __html: product.description }} />
+                    <div className={"productDescription"} dangerouslySetInnerHTML={{ __html: product.description }} />
                 </div>
             </div>
         )

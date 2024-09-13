@@ -17,11 +17,24 @@
 }
 
 .cartButton {
-    background-color: #00cc29;
+    background-color: #7ee693;
     color: white;
     border: none;
-    padding: 10px 20px;
+    padding: 20px 20px;
     cursor: pointer;
     font-size: 1.2em;
     text-transform: uppercase;
+}
+
+.productDescription {
+    font-size: 1.2em;
+    font-weight: 500;
+    line-height: 1.8em;
+}
+
+.detailsPrice {
+    font-size: 1.5em;
+    font-weight: 800;
+    margin-bottom: 0px;
+    padding-bottom: 50px;
 }

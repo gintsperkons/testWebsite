@@ -13,7 +13,7 @@ class Attributes extends React.Component {
   render() {
     return (
       <div className="attributes">
-        <h2>{this.props.title}</h2>
+        <h2 className={"attributeTitle"}>{this.props.title}:</h2>
         <div className="attributesContainer">
           {this.props.attributes.map((attribute, index) => {
             const isSelected = this.state.selected === index;
