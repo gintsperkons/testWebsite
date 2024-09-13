@@ -1,0 +1,48 @@
+/* Container for the whole Attributes component */
+.attributes {
+    padding: 20px 0px;
+  }
+  
+  /* Styling for the title */
+  .attributes h2 {
+    font-size: 1.5em;
+    margin-bottom: 10px;
+    color: #333;
+  }
+  
+  /* Container for the attribute elements */
+  .attributesContainer {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 10px;
+  }
+  
+  /* Styling for swatch elements */
+  .swatch {
+    width: 50px;
+    height: 50px;
+    border: 1px solid #ccc;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Styling for text elements */
+  .text {
+    padding: 10px;
+    border: 1px solid #000000;
+    background-color: #fff;
+    color: #333;
+    text-align: center;
+    font-size: 1.5em;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  
+  .swatch.selected {
+    border: 3px solid #007bff; 
+  }
+  
+  .text.selected {
+    background-color: #000000; 
+    color: #ffffff;
+  }

@@ -28,7 +28,6 @@ class AttributeSet extends BaseModel {
                 $atSetId = $pdo->lastInsertId();
             }
             foreach ($data['items'] as $attribute) {
-                error_log(print_r($attribute,true));
                 $attribute['attributeSetId'] = $atSetId;
                 $attribute['attId'] = $attribute['id'];
                 unset($attribute['id']);

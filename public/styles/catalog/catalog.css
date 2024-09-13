@@ -1,0 +1,12 @@
+.catalogTitle {
+    text-transform: capitalize;
+}
+
+.catalog {
+    padding: 0px 20px;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        grid-column-gap: 150px;
+        grid-row-gap: 100px;
+    
+}

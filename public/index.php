@@ -14,16 +14,12 @@ $dispatcher = FastRoute\simpleDispatcher(function(FastRoute\RouteCollector $r) {
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../');
 $dotenv->load();
 
-// Dispatch the request
-$routeInfo = $dispatcher->dispatch(
-    $_SERVER['REQUEST_METHOD'],
-    $_SERVER['REQUEST_URI']
-);
+
 
 
 
 // Serve static files directly
-if (preg_match('/\.(jpg|jpeg|png|gif|css|js|jsx)$/', $_SERVER['REQUEST_URI'])) {
+if (preg_match('/\.(jpg|jpeg|png|gif|css|js|jsx|svg)$/', $_SERVER['REQUEST_URI'])) {
     $filePath = __DIR__ . '/../public' . $_SERVER['REQUEST_URI'];
     if (file_exists($filePath) && is_file($filePath)) {
         if (str_ends_with($filePath, '.css')) {
@@ -42,6 +38,17 @@ if (preg_match('/\.(jpg|jpeg|png|gif|css|js|jsx)$/', $_SERVER['REQUEST_URI'])) {
         exit;
     }
 }
+
+$requestUri = $_SERVER['REQUEST_URI'];
+$parsedUrl = parse_url($requestUri);
+$path = $parsedUrl['path'] ?? '/';
+
+// Dispatch the request
+$routeInfo = $dispatcher->dispatch(
+    $_SERVER['REQUEST_METHOD'],
+    $path
+);
+
 
 // Handle the route
 switch ($routeInfo[0]) {

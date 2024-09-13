@@ -1,31 +1,146 @@
 
 
-class Main extends React.Component {
+
+class App extends React.Component {
     constructor(props) {
         super(props);
-        // Initialize state
+        this.products = {};
         this.state = {
-            products: [],  // Store fetched products
-            loading: true, // Loading state
-            error: null    // Error state
+            categories: [],
+            products: [],
+            error: null,
+            selectedCategory: null,
+            view: 'catalog',
+            id: null
         };
-    }
+    };
 
     componentDidMount() {
-        console.log('Main has been mounted!');
-        this.fetchProducts(); // Fetch products when component mounts
+        window.addEventListener('popstate', this.handlePopState);
+        this.handleNavigation();
+        this.setState({ selectedCategory: localStorage.getItem('selectedCategory') });
+        this.fetchCategories();
+        this.fetchProductsByCategory(localStorage.getItem('selectedCategory'));
     }
 
-    // Function to fetch products from the GraphQL API
-    fetchProducts = async () => {
-        // Define your GraphQL query as a string
+    componentWillUnmount() {
+        window.removeEventListener('popstate', this.handlePopState);
+    }
+
+    render() {
+        const { error, view, categories, products, selectedCategory } = this.state;
+
+        if (error) {
+            return (
+                <p>Error: {error.message}</p>
+            )
+        }
+
+
+
+        if (view === 'details') {
+            return (
+                <div>
+                    <Header
+                        categories={categories}
+                        selectedCategory={selectedCategory}
+                        onCategoryClick={this.handleCategoryClick}
+                    />
+                    <ProductDetails productId = {this.state.id} />
+                </div>
+
+            );
+
+        }
+        if (view === 'catalog') {
+            return (
+                <div>
+                    <Header
+                        categories={categories}
+                        selectedCategory={selectedCategory}
+                        onCategoryClick={this.handleCategoryClick}
+                    />
+                    <Catalog products={products} catalogTitle={selectedCategory} productClicked={this.handleProductClick} />
+                </div>
+            );
+        }
+
+
+
+
+
+    }
+
+
+    //Handles
+    handlePopState = (event) => {
+        if (event.state) {
+            const { view, id } = event.state;
+            this.setState({ view, id }, () => {
+                this.navigate(view, id);
+            });
+        }
+    };
+
+    navigate = (view, id) => {
+        if (view === 'catalog') {
+            localStorage.setItem('selectedCategory', id);
+            this.setState({ selectedCategory: id });
+            if (this.products[id]) {
+                this.setState({ products: this.products[id] });
+            } else {
+                this.fetchProductsByCategory(id);
+            }
+        }
+    }
+
+    handleNavigation = (view = null, id = null) => {
+        const url = new URL(window.location.href);
+
+        if (!view) {
+            view = url.searchParams.get('view') || 'catalog';
+        }
+        if (id === null) {
+            id = url.searchParams.get('id');
+        }
+
+        url.searchParams.set('view', view);
+        if (id) {
+            url.searchParams.set('id', id);
+        } else {
+            url.searchParams.delete('id');
+        }
+
+        this.navigate(view, id);
+
+        
+        
+        window.history.pushState({ view, id }, '', url.toString());
+
+        this.setState({ view: view, id: id });
+    };
+
+
+    handleProductClick = (product) => {
+        console.log('Product clicked:', product);
+        this.handleNavigation('details', product.id);
+    }
+
+    handleCategoryClick = (category) => {
+        localStorage.setItem('selectedCategory', category);
+        this.handleNavigation('catalog', category);
+    }
+
+
+    //Fetches
+
+    fetchCategories = async () => {
         const query = `
-          query { products { id name inStock description category attributes { id name type items { id displayValue value } } prices { amount currency { label symbol } } brand gallery } }
+          query { categories { name } }
         `;
 
-        // Function to fetch data from a GraphQL API
         try {
-            const response = await fetch('http://172.26.111.129/graphql', {
+            const response = await fetch('/graphql', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -35,9 +150,41 @@ class Main extends React.Component {
                 })
             });
 
-            const result = await response.json(); // Parse the JSON from the response
+            const result = await response.json();
+            console.log('Data from GraphQL:', result.data.categories);
+
+            this.setState({
+                categories: result.data.categories,
+                loading: false
+            });
+        } catch (error) {
+            console.error('Error fetching GraphQL data:', error);
+
+            this.setState({
+                error: error
+            });
+        }
+    };
+
+    fetchProductsByCategory = async (category) => {
+        const query = `
+          query { products(category: "${category}") { id name inStock description category gallery prices { amount currency { symbol } } } }
+        `;
+
+        try {
+            const response = await fetch('/graphql', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    query: query
+                })
+            });
+
+            const result = await response.json();
             console.log('Data from GraphQL:', result.data.products);
-            // Update state with the fetched products
+            this.products[category] = result.data.products;
             this.setState({
                 products: result.data.products,
                 loading: false
@@ -45,55 +192,45 @@ class Main extends React.Component {
         } catch (error) {
             console.error('Error fetching GraphQL data:', error);
 
-            // Update state with the error
             this.setState({
-                loading: false,
                 error: error
             });
         }
-    };
+    }
 
-    render() {
-        const { products, loading, error } = this.state;
+    fetchProductById = async (id) => {
+        const query = `
+          query { product(id: "${id}") { id name inStock description category gallery prices { amount currency { symbol } } } }
+        `;
 
-        // Render loading message if data is still being fetched
-        if (loading) {
-            return React.createElement('div', null, 'Loading...');
+        try {
+            const response = await fetch('/graphql', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    query: query
+                })
+            });
+
+            const result = await response.json();
+            console.log('Data from GraphQL:', result.data.product);
+
+            return result.data.product;
+        } catch (error) {
+            console.error('Error fetching GraphQL data:', error);
+
+            this.setState({
+                error: error
+            });
         }
-
-        // Render error message if there was an error fetching data
-        if (error) {
-            return React.createElement('div', null, `Error: ${error.message}`);
-        }
-
-        // Render products if data has been successfully fetched
-        return (
-            <div>
-                <Header />
-                <h1>Products</h1>
-                <div>
-                    {products.map((product) => (
-                        <div key={product.id}>
-                            <h2>{product.name}</h2>
-                            <p>{product.description}</p>
-                            <p>{product.category}</p>
-                            <p>{product.prices[0].amount} {product.prices[0].currency.symbol}</p>
-                            <img src={product.gallery[0]} alt={product.name} />
-                        </div>
-                    ))}
-                </div>
-            </div>
-        )
-        
-        
-        
     }
 }
 
-// Get the root element from the DOM
-const root = ReactDOM.createRoot(document.getElementById('root'));
 
-// Render the React component into the root element
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
-    React.createElement(Main)
-);
+    React.createElement(App)
+)

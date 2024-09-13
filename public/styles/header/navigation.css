@@ -1,0 +1,19 @@
+.navigation {
+  display: flex;
+  flex-direction: row;
+
+  
+}
+
+.navItem {
+  padding: 0 20px;
+  text-decoration: none;
+  color: black;
+  font-size: 1.2em;
+  text-transform: uppercase;
+}
+
+.navItem.selected {
+  color: #00cc29;
+  border-bottom: #00cc29 4px solid;
+}

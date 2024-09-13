@@ -20,12 +20,8 @@ class Price extends SearchableModel {
             $data['amount'] = round($data['amount'], 2);
             $sql = 'SELECT * FROM ' . static::$table . ' WHERE productId = :productId and ROUND(amount, 2) = :amount and currencyId = :currencyId';
             $stmt = $pdo->prepare($sql);
-            error_log($currencyId);
-            error_log(print_r($data,true));
             $stmt->execute(['productId' => $data['productId'], 'amount' => $data['amount'], 'currencyId' => $currencyId]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            error_log("-------------------");
-            error_log(print_r($result,true));
             if ($result) {
                 return $result;
             } else {

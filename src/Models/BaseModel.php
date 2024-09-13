@@ -34,22 +34,6 @@ abstract class BaseModel {
         }
     }
 
-    public static function getByName($name) {
-        if (empty(static::$table)) {
-            throw new Exception('Table not found');
-        }
-
-        try {
-            $pdo = static::getConnection();
-            $stmt = $pdo->prepare("SELECT * FROM " . static::$table . " WHERE name = :name");
-            $stmt->execute(['name' => $name]);
-            return $stmt->fetch(PDO::FETCH_ASSOC);
-        } catch (PDOException $e) {
-            error_log('Database error: ' . $e->getMessage());
-        } catch (Exception $e) {
-            error_log('General error: ' . $e->getMessage());
-        }
-    }
 
     public static function getAll() {
         if (empty(static::$table)) {
