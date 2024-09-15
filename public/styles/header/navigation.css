@@ -6,7 +6,8 @@
 }
 
 .navItem {
-  padding: 0 20px;
+  visibility: visible;
+  padding: 15px 20px;
   text-decoration: none;
   color: black;
   font-size: 1.2em;
@@ -14,6 +15,6 @@
 }
 
 .navItem.selected {
-  color: #00cc29;
-  border-bottom: #00cc29 4px solid;
+  color: var(--buttonColor);
+  border-bottom: var(--buttonColor) 4px solid;
 }

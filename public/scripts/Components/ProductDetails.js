@@ -3,7 +3,8 @@ class ProductDetails extends React.Component {
         super(props);
         this.state = {
             product: null,
-            error: null
+            error: null,
+            selectedAttributes: []
         };
     }
 
@@ -16,8 +17,11 @@ class ProductDetails extends React.Component {
             });
     }
 
-  
-  
+    handleSelect = (attributeId, valueId) => {
+        this.setState({ selectedAttributes: [...this.state.selectedAttributes, { attributeId, valueId }] });
+    }
+
+
     render() {
         const { product, error } = this.state;
 
@@ -40,22 +44,56 @@ class ProductDetails extends React.Component {
                 <div className="productDetailsInfo">
                     <h1>{product.name}</h1>
                     {this.state.product.attributes.map((attribute) => (
-                        <Attributes 
-                        key={attribute.id} 
-                        title={attribute.name} 
-                        attributes={attribute.items} 
-                        type={attribute.type} />
+                        <Attributes
+                            key={attribute.id}
+                            title={attribute.name}
+                            attributes={attribute.items}
+                            type={attribute.type}
+                            id={attribute.id}
+                            onSelect={this.handleSelect}
+                        />
                     ))}
                     <h2 className={"attributeTitle"}>Price:</h2>
                     <p className={"detailsPrice"}>{product.prices[0].currency.symbol}{product.prices[0].amount}</p>
-                    <button className = {"cartButton"}>Add to cart</button>
-                    <div className={"productDescription"} dangerouslySetInnerHTML={{ __html: product.description }} />
+                    <button
+                        data-testid='add-to-cart'
+                        disabled={this.state.selectedAttributes.length < this.state.product.attributes.length}
+                        onClick={() => {
+                            this.props.addToCart(this.state.product, this.state.selectedAttributes);
+                            this.props.toggleCart();
+                        }}
+                        className={`cartButton ${this.state.selectedAttributes.length < this.state.product.attributes.length? "disabled": ""}`}>
+                        Add to cart
+                    </button>
+                    <div className={"productDescription"} data-testid='product-description' >{this.renderHTML(product.description)}</div>
                 </div>
             </div>
         )
     }
 
 
+    renderHTML = (description) => {
+        const parser = new DOMParser();
+        const parsedHtml = parser.parseFromString(description, 'text/html');
+        const childNodes = parsedHtml.body.childNodes;
+
+        const renderNode = (node) => {
+            switch (node.nodeName) {
+                case 'P':
+                    return <p>{node.textContent}</p>;
+                case 'B':
+                    return <b>{node.textContent}</b>;
+                case 'I':
+                    return <i>{node.textContent}</i>;
+                case 'BR':
+                    return <br />;
+                default:
+                    return node.textContent; // For text and unsupported tags
+            }
+        };
+
+        return Array.from(childNodes).map((node, index) => <React.Fragment key={index}>{renderNode(node)}</React.Fragment>);
+    };
     fetchProductById = async (id) => {
         const query = `
           query { product(id: "${id}") { id name inStock description category attributes { id name type items { id displayValue value } } prices { amount currency { label symbol } } brand gallery } }
@@ -85,7 +123,7 @@ class ProductDetails extends React.Component {
         }
     }
 
-  
+
 
 }
 

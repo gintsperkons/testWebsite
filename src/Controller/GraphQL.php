@@ -17,6 +17,7 @@ use Throwable;
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\Orders;
 
 class GraphQL
 {
@@ -107,7 +108,7 @@ class GraphQL
             'name' => 'Product',
             'fields' => [
                 'id' => [
-                    'type' => Type::int(),
+                    'type' => Type::string(),
                 ],
                 'name' => [
                     'type' => Type::string(),
@@ -232,6 +233,25 @@ class GraphQL
         ]);
 
 
+        // Define the input type for selected attributes
+        $selectedAttributeInputType = new InputObjectType([
+            'name' => 'SelectedAttributeInput',
+            'fields' => [
+                'attributeId' => Type::nonNull(Type::string()),
+                'valueId' => Type::nonNull(Type::string())
+            ]
+        ]);
+
+        // Define the input type for placing an order
+        $placeOrderInputType = new InputObjectType([
+            'name' => 'PlaceOrderInput',
+            'fields' => [
+                'productId' => Type::nonNull(Type::string()),
+                'quantity' => Type::nonNull(Type::int()),
+                'selectedAttributes' => Type::listOf($selectedAttributeInputType)
+            ]
+        ]);
+
         $queryType = new ObjectType([
             'name' => 'Query',
             'fields' => [
@@ -250,8 +270,11 @@ class GraphQL
                     'type' => Type::listOf($productType),
                     'args' => [
                         'category' => ['type' => Type::string()],
-                    ],	
+                    ],
                     'resolve' => function ($rootValue, array $args) {
+                        if (isset($args['category']) && $args['category'] === 'all') {
+                            return Product::getAll();
+                        }
                         if (isset($args['category'])) {
                             return Product::getByCategory($args['category']);
                         }
@@ -265,7 +288,7 @@ class GraphQL
                     ],
                     'resolve' => function ($rootValue, array $args) {
                         if (isset($args['id'])) {
-                            return Product::getById($args['id']);
+                            return Product::getByTextId($args['id']);
                         }
                         return null;
                     },
@@ -379,6 +402,17 @@ class GraphQL
                             return $e->getMessage();
                         }
                     },
+                ],
+                'placeOrder' => [
+                    'type' => Type::id(),
+                    'args' => [
+                        'input' => ['type' => Type::listOf($placeOrderInputType)],
+                        
+                    ],
+                    'resolve' => function ($rootValue, $args, $context, $info) {
+                        $input = $args['input'];
+                        return Orders::create($input);
+                    }
                 ],
             ],
         ]);

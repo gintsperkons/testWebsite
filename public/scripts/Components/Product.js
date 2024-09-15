@@ -18,7 +18,7 @@ class Product extends React.Component {
 
     render() {
         return (
-            <div className={`product ${!this.state.product.inStock ? 'outOfStock' : ''}`} onClick = {() => this.props.productClicked(this.state.product)}>
+            <div data-testid={`product-${this.props.product.name.replace(/\s+/g, '-').toLowerCase()}`} className={`product ${!this.state.product.inStock ? 'outOfStock' : ''}`} onClick = {() => {this.props.productClicked(this.state.product);}}>
                 <div className="productImageWrapper">
                     <img
                         className={`productImage ${!this.state.product.inStock ? 'outOfStock' : ''}`}
@@ -34,7 +34,7 @@ class Product extends React.Component {
                     {this.state.product.prices[0].currency.symbol}
                     {this.state.product.prices[0].amount}
                 </p>
-                <div className="productCartImageWrapper">
+                <div onClick={(e) => {e.stopPropagation(); this.props.addToCart(this.state.product);}} className="productCartImageWrapper">
                     <img className={"productCartImage"} src="/images/shopping-cart-svgrepo-com.svg" alt="cart" />
                 </div>
             </div>

@@ -1,10 +1,16 @@
 #header {
     display: flex;
+    position: relative;
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
     height: 70px;
+    padding: 20px 120px 0px 120px;
+    z-index: 2;
 }
+
+
+
 
 .storeIcon {
     height: 75%;

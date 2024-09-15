@@ -38,7 +38,9 @@ class Header extends React.Component {
 
                 </nav>
                 <img className={"storeIcon"} src="https://cdn-images-1.medium.com/v2/resize:fit:184/1*Y_sgnCWYyqFHYExu4J7i7w@2x.png" alt="logo" />
-                <Cart />
+                <Cart 
+                        isCartOpen={this.props.isCartOpen}
+                        toggleCart={this.props.toggleCart}  clearCart = {this.props.clearCart} cart = {this.props.cart} addToCart={this.props.addToCart} removeFromCart={this.props.removeFromCart} />
             </header>
         )
     }

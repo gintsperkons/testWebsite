@@ -79,7 +79,7 @@
     position: absolute;
     bottom: 100px;
     right: 50px;
-    background-color: rgb(102, 223, 102); 
+    background-color: var(--buttonColor); 
     border-radius: 100%;
     padding: 10px;
     width: 50px;

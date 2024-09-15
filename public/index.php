@@ -9,6 +9,15 @@ $dispatcher = FastRoute\simpleDispatcher(function(FastRoute\RouteCollector $r) {
     $r->addRoute('GET', '/', function() {
         echo file_get_contents(__DIR__ . '/../public/index.html');
     });
+    $r->addRoute('GET', '/tech', function() {
+        echo file_get_contents(__DIR__ . '/../public/index.html');
+    });
+    $r->addRoute('GET', '/clothes', function() {
+        echo file_get_contents(__DIR__ . '/../public/index.html');
+    });
+    $r->addRoute('GET', '/all', function() {
+        echo file_get_contents(__DIR__ . '/../public/index.html');
+    });
 });
 
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../');

@@ -74,8 +74,8 @@ class Product extends SearchableModel {
         return $products;
     }
 
-    public static function getById($id) {
-        $product = parent::getById($id);
+    public static function getByTextId($id) {
+        $product = parent::getByForeignKey('productId', $id)[0];
         $product = self::populateProductData([$product]);
         return $product[0];
     }
@@ -88,47 +88,61 @@ class Product extends SearchableModel {
 
 
     public static function populateProductData($products) {
-        foreach ($products as $key => $product) {
+        for ($i = 0; $i < count($products); $i++) {
+            try {
+            $product = $products[$i];
+            $productTextId = $product["productId"];
+            $products[$i]['numId'] = $products[$i]['id'];
             // Get and set brand name
-            $products[$key]['brand'] = Brand::getById($product['brandId'])['name'];
-            
+            $products[$i]['brand'] = Brand::getById($product['brandId'])['name'];
+        
             // Get and set category name
-            $products[$key]['category'] = Category::getById($product['categoryId'])['name'];
-            
+            $products[$i]['category'] = Category::getById($product['categoryId'])['name'];
+        
             // Get and set gallery images
-            $products[$key]['gallery'] = array();
+            $products[$i]['gallery'] = array();
             $gallery = Gallery::getByForeignKey('productId', $product['id']);
             foreach ($gallery as $image) {
-                $products[$key]['gallery'][] = $image['imagePath'];
+                $products[$i]['gallery'][] = $image['imagePath'];
             }
-    
+        
             // Get and set prices
-            $products[$key]['prices'] = array();
+            $products[$i]['prices'] = array();
             $prices = Price::getByForeignKey('productId', $product['id']);
             foreach ($prices as $price) {
                 $currency = Currency::getById($price['currencyId']);
-                unset($currency['id']);
-                $products[$key]['prices'][] = ['amount' => $price['amount'], 'currency' => $currency];
+                unset($currency['id']);  // Remove 'id' from currency details
+                $products[$i]['prices'][] = ['amount' => $price['amount'], 'currency' => $currency];
             }
-    
-            // Get and set attributes
-            $products[$key]['attributes'] = array();
+        
+            $products[$i]['attributes'] = array();
+            error_log($product['id']);
             $attributeSets = AttributeSet::getByForeignKey('productId', $product['id']);
+            error_log(print_r($attributeSets, true));
             foreach ($attributeSets as $attributeSet) {
                 $attributes = Attribute::getByForeignKey('attributeSetId', $attributeSet['id']);
                 $items = Attribute::getByForeignKey('attributeSetId', $attributeSet['id']);
-                foreach ($items as $item) {
-                    $item['id'] = $item['attId'];
-                    unset($item['attId']);
-                    unset($item['attributeSetId']);
+                
+                for ($j = 0; $j < count($items); $j++) {
+                    $items[$j]['id'] = $items[$j]['attId'];
+                    unset($items[$j]['attId']);
+                    unset($items[$j]['attributeSetId']);
                 }
+                
                 $attributeSet['id'] = $attributeSet['setId'];
                 unset($attributeSet['setId']);
                 unset($attributeSet['productId']);
+
                 $attributeSet['items'] = $items;
-                $products[$key]['attributes'][] = $attributeSet;
+        
+                $products[$i]['attributes'][] = $attributeSet;
+            }
+            $products[$i]['id'] = $productTextId;
+            } catch (PDOException $e) {
+                error_log('Execution error: ' . $e->getMessage());
             }
         }
+
         return $products;
     }
     

@@ -13,7 +13,7 @@ class ImageGallary extends React.Component {
     }
     render() {
         return (
-            <div className="productGallery">
+            <div className="productGallery" data-testid='product-gallery'>
                 <div className="thumbnailContainer">
                     {this.state.images.map((image, index) => (
                         <ThumbnailImage

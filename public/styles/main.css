@@ -1,6 +1,29 @@
 /* Example of more specific selector */
+body {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    width: 100%;
+    --buttonColor: #58ea75;
+}
+
 #root {
-    padding: 20px 120px;
     font-family: "Raleway", sans-serif;
     font-optical-sizing: auto;
+}
+
+.body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100vh;
+}
+
+
+.body > div {
+    padding: 20px 120px;
+}
+
+#root>div {
+    width: 100%;
 }

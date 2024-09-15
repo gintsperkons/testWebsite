@@ -132,4 +132,38 @@ abstract class BaseModel {
         }
     }
 
+    public static function getByValues(array $criteria) {
+        try {
+            $pdo = static::getConnection();
+            // Build the query dynamically based on provided criteria
+            $conditions = [];
+            $parameters = [];
+            foreach ($criteria as $key => $value) {
+                $conditions[] = "$key = :$key";
+                $parameters[":$key"] = $value;
+            }
+            
+            $whereClause = implode(' AND ', $conditions);
+            $sql = "SELECT * FROM " . static::$table . " WHERE $whereClause LIMIT 1";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($parameters);
+            
+            // Fetch the result
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            // Check if result is found
+            if ($result) {
+                return $result;
+            } else {
+                throw new Exception('No attributes found for the provided criteria');
+            }
+            
+        } catch (PDOException $e) {
+            error_log('Database error: ' . $e->getMessage());
+            throw new Exception('Database error');
+        } catch (Exception $e) {
+            error_log('General error: ' . $e->getMessage());
+            throw new Exception('General error');
+        }
+    }
 }

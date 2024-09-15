@@ -20,7 +20,7 @@ class Catalog extends React.Component {
                 <h1 className={"catalogTitle"}>{this.props.catalogTitle}</h1>
                 <div className={"catalog"}>
                     {this.state.products.map((product, index) => (
-                        <Product key={index} product={product}  productClicked = {this.props.productClicked}/>
+                        <Product key={index} product={product}  productClicked = {this.props.productClicked} addToCart={this.props.addToCart}/>
                     ))}
                 </div>
             </div>
